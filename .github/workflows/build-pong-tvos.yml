@@ -1,0 +1,46 @@
+name: Build Pong Screensaver for tvOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Pong
+        uses: actions/checkout@v3
+        with:
+          repository: xbmc/screensaver.pingpong
+          path: screensaver.pingpong
+
+      - name: Checkout Kodi
+        run: |
+          git clone --branch Omega --depth 1 https://github.com/xbmc/xbmc.git
+
+      - name: Prepare binary-addons
+        run: |
+          mkdir -p xbmc/addons/screensaver.pingpong
+          cp -r screensaver.pingpong/* xbmc/addons/screensaver.pingpong/
+
+      - name: Install deps
+        run: |
+          brew install cmake ninja autoconf automake libtool pkg-config
+
+      - name: Build Pong for tvOS
+        run: |
+          cd xbmc/tools/depends/target/binary-addons
+          ./bootstrap
+          ./configure --host=arm-apple-darwin --with-platform=appletvos
+          make screensaver.pingpong
+
+      - name: Find build output
+        run: |
+          mkdir -p output
+          find . -name "screensaver.pingpong*.zip" -exec cp {} output/ \;
+
+      - name: Upload Pong Zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: pong-tvos
+          path: output/*.zip
